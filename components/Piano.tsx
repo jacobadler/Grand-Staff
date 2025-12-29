@@ -48,7 +48,11 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed }) => {
 
   // SVG Configuration
   // Expanded Grand Staff Logic
-  // We split the rendering coordinate system at C4 to create a visual gap between staves.
+  // Gutter Logic:
+  // We reserve 120 units to the left for the clefs.
+  // Playable width is 1000 units.
+  // ViewBox X starts at -120.
+  // Total ViewBox Width = 1120.
   
   const getNoteY = (noteName: string) => {
     const octave = parseInt(noteName.slice(-1), 10);
@@ -62,32 +66,17 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed }) => {
     // Treble Staff Logic (Octave 4 and above)
     // C4 is effectively "Middle C" often written with Treble clef if leading up.
     if (stepsFromC4 >= 0) {
-        // Anchor: C4 is on the first ledger line below treble staff.
-        // Let's position Treble Staff Bottom (E4) at Y=100.
-        // E4 is 2 steps above C4. 
-        // So C4 is at Y=120.
         const C4_TREBLE_Y = 120;
         return C4_TREBLE_Y - (stepsFromC4 * 10);
     } 
     // Bass Staff Logic (Below C4)
     else {
-        // Anchor: A3 is the top line of Bass Staff.
-        // Let's position Bass Staff Top (A3) at Y=190. (Gap of 90px from E4 line, or 50px extra space).
-        // A3 is 2 steps below C4.
-        // So "Virtual C4" for Bass projection is Y=170.
         const C4_BASS_Y = 170;
         return C4_BASS_Y - (stepsFromC4 * 10);
     }
   };
 
-  // Treble Staff Lines: F5, D5, B4, G4, E4
-  // If E4 is at 100, then:
-  // E4=100, G4=80, B4=60, D5=40, F5=20
   const trebleLines = [20, 40, 60, 80, 100];
-
-  // Bass Staff Lines: A3, F3, D3, B2, G2
-  // If A3 is at 190, then:
-  // A3=190, F3=210, D3=230, B2=250, G2=270
   const bassLines = [190, 210, 230, 250, 270];
 
   return (
@@ -96,24 +85,25 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed }) => {
        {/* Dynamic SVG Grand Staff */}
        <div className="w-full bg-amber-50 rounded-t-lg border-x-4 border-t-4 border-gray-900 relative shadow-sm overflow-hidden">
           <svg 
-            viewBox="0 0 1000 320" 
+            viewBox="-120 0 1120 320" 
             className="w-full h-auto block" 
             preserveAspectRatio="none"
           >
-            {/* Staff Lines */}
+            {/* Staff Lines (extended to left gutter) */}
             <g stroke="#94a3b8" strokeWidth="2">
-              {trebleLines.map(y => <line key={`t-${y}`} x1="0" y1={y} x2="1000" y2={y} />)}
-              {bassLines.map(y => <line key={`b-${y}`} x1="0" y1={y} x2="1000" y2={y} />)}
+              {trebleLines.map(y => <line key={`t-${y}`} x1="-110" y1={y} x2="1000" y2={y} />)}
+              {bassLines.map(y => <line key={`b-${y}`} x1="-110" y1={y} x2="1000" y2={y} />)}
             </g>
 
             {/* Brace / Connector */}
             {/* Connects top of Treble (20) to bottom of Bass (270) */}
-            <line x1="2" y1="20" x2="2" y2="270" stroke="#0f172a" strokeWidth="4" />
-            <path d="M2,20 Q-15,145 2,270" fill="none" stroke="#0f172a" strokeWidth="4" />
+            {/* Shifted to the left gutter */}
+            <line x1="-110" y1="20" x2="-110" y2="270" stroke="#0f172a" strokeWidth="4" />
+            <path d="M-110,20 Q-127,145 -110,270" fill="none" stroke="#0f172a" strokeWidth="4" />
 
-            {/* Clef Placeholders */}
-            <text x="20" y="90" fontSize="75" fill="#0f172a" fontFamily="serif" fontWeight="bold">𝄞</text>
-            <text x="20" y="225" fontSize="70" fill="#0f172a" fontFamily="serif" fontWeight="bold">𝄢</text>
+            {/* Clef Placeholders (Shifted left) */}
+            <text x="-90" y="90" fontSize="75" fill="#0f172a" fontFamily="serif" fontWeight="bold">𝄞</text>
+            <text x="-90" y="255" fontSize="70" fill="#0f172a" fontFamily="serif" fontWeight="bold">𝄢</text>
 
             {/* Notes Rendering */}
             {OCTAVE_DATA.map((note) => {
@@ -140,14 +130,9 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed }) => {
                    {/* Local Ledger Lines */}
                    {(isActive || showGhost) && (
                       <>
-                        {/* Middle C (C4) Ledger Line - Y=120 */}
                         {note.name === 'C4' && (
                           <line x1={x - 18} y1={y} x2={x + 18} y2={y} stroke="black" strokeWidth="2" />
                         )}
-                        {/* A2 or similar low notes might need them, but C3 is within Bass staff (Space below B2 line? No.
-                            Bass Lines: G2(270), B2(250), D3(230), F3(210), A3(190).
-                            C3 is above B2 line, below D3 line. It's in a space. No ledger.
-                        */}
                       </>
                    )}
 
@@ -193,28 +178,35 @@ const Piano: React.FC<PianoProps> = ({ onNotePlayed }) => {
         {/* Keys Container */}
         <div className="relative w-full h-full bg-black rounded-b-lg overflow-hidden shadow-inner ring-4 ring-gray-900 ring-t-0 flex">
           
-          {/* Render White Keys (Flex) */}
-          {whiteKeys.map((note) => (
-            <Key
-              key={note.name}
-              note={note}
-              isBlack={false}
-              isPlaying={activeNotes.has(note.name)}
-              onPlay={playNote}
-            />
-          ))}
+          {/* Cheek block (left side filler) matching the SVG gutter (120/1120 = 10.71%) */}
+          <div className="h-full bg-gray-900 border-r border-gray-800 flex-shrink-0" style={{ width: '10.71%' }}></div>
 
-          {/* Render Black Keys (Absolute) */}
-          {blackKeys.map((note, index) => (
-            <Key
-              key={note.name}
-              note={note}
-              isBlack={true}
-              offsetIndex={index}
-              isPlaying={activeNotes.has(note.name)}
-              onPlay={playNote}
-            />
-          ))}
+          {/* Playable Area Wrapper */}
+          <div className="relative flex-1 h-full flex">
+            {/* Render White Keys (Flex) */}
+            {whiteKeys.map((note) => (
+                <Key
+                key={note.name}
+                note={note}
+                isBlack={false}
+                isPlaying={activeNotes.has(note.name)}
+                onPlay={playNote}
+                />
+            ))}
+
+            {/* Render Black Keys (Absolute relative to this wrapper) */}
+            {blackKeys.map((note, index) => (
+                <Key
+                key={note.name}
+                note={note}
+                isBlack={true}
+                offsetIndex={index}
+                isPlaying={activeNotes.has(note.name)}
+                onPlay={playNote}
+                />
+            ))}
+          </div>
+
         </div>
       </div>
     </div>

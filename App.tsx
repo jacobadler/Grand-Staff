@@ -18,9 +18,9 @@ function App() {
   return (
     <div 
       className="min-h-screen bg-slate-900 flex flex-col items-center p-6 md:p-12"
-      onMouseDown={handleUserInteraction}
-      onTouchStart={handleUserInteraction}
-      onKeyDown={handleUserInteraction}
+      onMouseDownCapture={handleUserInteraction}
+      onTouchStartCapture={handleUserInteraction}
+      onKeyDownCapture={handleUserInteraction}
     >
       
       {/* Header */}

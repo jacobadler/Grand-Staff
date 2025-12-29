@@ -3,9 +3,10 @@ class AudioService {
   private masterGain: GainNode;
 
   constructor() {
-    // Initialize immediately to avoid allocation delay on first user interaction
+    // Initialize immediately to avoid allocation delay on first user interaction.
+    // Use latencyHint: 'interactive' to ensure the browser prioritizes low latency (fixes first-note delay).
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    this.audioContext = new AudioContextClass();
+    this.audioContext = new AudioContextClass({ latencyHint: 'interactive' });
     
     this.masterGain = this.audioContext.createGain();
     this.masterGain.gain.value = 0.5; // Master volume
